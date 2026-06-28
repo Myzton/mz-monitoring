@@ -11,6 +11,11 @@ type ctxKey string
 
 const UserIDKey ctxKey = "userID"
 
+func UserIDFromContext(ctx context.Context) (int, bool) {
+	userID, ok := ctx.Value(UserIDKey).(int)
+	return userID, ok
+}
+
 func AuthMiddleware(next http.Handler, tokenKey string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")

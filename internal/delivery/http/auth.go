@@ -20,7 +20,7 @@ func NewUserHandler(u *usecase.UserUsecase) *UserHandler {
 	return &UserHandler{Usecase: u}
 }
 
-type Response struct {
+type ResponseUser struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`
 }
@@ -61,7 +61,7 @@ func (h *UserHandler) CreateUserHandler(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	resp := Response{Status: "success", Message: "User created successfully"}
+	resp := ResponseUser{Status: "success", Message: "User created successfully"}
 
 	err = json.NewEncoder(w).Encode(resp)
 	if err != nil {
