@@ -25,6 +25,7 @@ func NewTargetTarget(u *usecase.TargetUsecase) *TargetHandler {
 type ResponseTarget struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`
+	ID      int    `json:"id"`
 }
 
 type TargetResponse struct {
@@ -54,7 +55,7 @@ func (h *TargetHandler) CreateTargetHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	_, err = h.Usecase.Create(ctx, userId, input.URL, input.IntervalSec)
+	targetCreated, err := h.Usecase.Create(ctx, userId, input.URL, input.IntervalSec)
 	if err != nil {
 		slog.Error("Error create target", "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -64,7 +65,7 @@ func (h *TargetHandler) CreateTargetHandler(w http.ResponseWriter, r *http.Reque
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
-	resp := ResponseTarget{Status: "success", Message: "Target created successfully"}
+	resp := ResponseTarget{Status: "success", Message: "Target created successfully", ID: targetCreated.ID}
 
 	err = json.NewEncoder(w).Encode(resp)
 	if err != nil {

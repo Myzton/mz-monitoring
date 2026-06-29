@@ -18,8 +18,8 @@ func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
 	return &UserRepository{pool: pool}
 }
 func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
-	query := `INSERT INTO users ( name, password, email) VALUES ($1, $2, $3)`
-	_, err := r.pool.Exec(ctx, query, user.Name, user.Password, user.Email)
+	query := `INSERT INTO users ( name, password, email) VALUES ($1, $2, $3) RETURNING id`
+	err := r.pool.QueryRow(ctx, query, user.Name, user.Password, user.Email).Scan(&user.ID)
 	if err != nil {
 		slog.Error("An error occurred.", "error", err)
 		return err

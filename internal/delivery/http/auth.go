@@ -23,6 +23,7 @@ func NewUserHandler(u *usecase.UserUsecase) *UserHandler {
 type ResponseUser struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`
+	ID      int    `json:"id"`
 }
 
 type LoginStr struct {
@@ -52,7 +53,7 @@ func (h *UserHandler) CreateUserHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	_, err = h.Usecase.Create(ctx, input.Name, input.Password, input.Email)
+	createdUser, err := h.Usecase.Create(ctx, input.Name, input.Password, input.Email)
 	if err != nil {
 		slog.Error("user creation error", "err", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -61,7 +62,7 @@ func (h *UserHandler) CreateUserHandler(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	resp := ResponseUser{Status: "success", Message: "User created successfully"}
+	resp := ResponseUser{Status: "success", Message: "User created successfully", ID: createdUser.ID}
 
 	err = json.NewEncoder(w).Encode(resp)
 	if err != nil {

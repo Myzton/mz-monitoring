@@ -17,8 +17,8 @@ func NewTargetRepository(pool *pgxpool.Pool) *TargetRepository {
 }
 
 func (r *TargetRepository) Create(ctx context.Context, target *domain.Target) error {
-	query := `INSERT INTO targets (user_id, url, interval_sec, is_active) VALUES ($1, $2, $3, $4)`
-	_, err := r.pool.Exec(ctx, query, target.UserID, target.URL, target.IntervalSec, target.IsActive)
+	query := `INSERT INTO targets (user_id, url, interval_sec, is_active) VALUES ($1, $2, $3, $4) RETURNING id`
+	err := r.pool.QueryRow(ctx, query, target.UserID, target.URL, target.IntervalSec, target.IsActive).Scan(&target.ID)
 	if err != nil {
 		slog.Error("An error occurred.", "error", err)
 		return err
