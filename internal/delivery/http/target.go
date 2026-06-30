@@ -18,7 +18,7 @@ type TargetHandler struct {
 	Usecase *usecase.TargetUsecase
 }
 
-func NewTargetTarget(u *usecase.TargetUsecase) *TargetHandler {
+func NewTargetHandler(u *usecase.TargetUsecase) *TargetHandler {
 	return &TargetHandler{u}
 }
 

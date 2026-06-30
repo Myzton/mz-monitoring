@@ -9,22 +9,29 @@ import (
 
 type Scheduler struct {
 	TargetRep domain.TargetRepository
+	QueuePub  domain.QueuePublisher
 }
 
-func NewScheduler(d domain.TargetRepository) *Scheduler {
-	return &Scheduler{d}
+func NewScheduler(t domain.TargetRepository, q domain.QueuePublisher) *Scheduler {
+	return &Scheduler{t, q}
 }
 
 func (s *Scheduler) Start(ctx context.Context) error {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
-	for {
+	var elapsedSeconds int
 
+	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
+			elapsedSeconds += 10
+			if elapsedSeconds > 60 {
+				elapsedSeconds = 10
+			}
+
 			targets, err := s.TargetRep.GetActive(ctx)
 			if err != nil {
 				slog.Error("Error get active sites", "error", err)
@@ -32,10 +39,17 @@ func (s *Scheduler) Start(ctx context.Context) error {
 			}
 
 			for _, target := range targets {
-				slog.Info("The scheduler has locked the site for verification.", "ID", target.ID, "URL", target.URL)
-			}
+				if elapsedSeconds%target.IntervalSec == 0 {
+					check := domain.CheckTask{target.ID, target.URL}
+					slog.Info("Time to check target!", "ID", target.ID, "Interval", target.IntervalSec, "URL", target.URL)
+					err := s.QueuePub.Publish(ctx, &check)
+					if err != nil {
+						slog.Error("Error", err)
+					}
 
+					// TODO: Здесь будет отправка JSON-сообщения в RabbitMQ
+				}
+			}
 		}
 	}
-
 }
