@@ -17,3 +17,8 @@ type CheckLog struct {
 type LogRepository interface {
 	SaveLog(ctx context.Context, check *CheckLog) error
 }
+
+type StatusCache interface {
+	SetStatus(ctx context.Context, targetID int, isOnline bool) error
+	GetStatus(ctx context.Context, targetID int) (bool, error)
+}
