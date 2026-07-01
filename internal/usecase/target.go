@@ -8,11 +8,15 @@ import (
 )
 
 type TargetUsecase struct {
-	targetRepo domain.TargetRepository
+	targetRepo  domain.TargetRepository
+	statusCache domain.StatusCache
 }
 
-func NewTargetUsecase(r domain.TargetRepository) *TargetUsecase {
-	return &TargetUsecase{r}
+func NewTargetUsecase(r domain.TargetRepository, cache domain.StatusCache) *TargetUsecase {
+	return &TargetUsecase{
+		targetRepo:  r,
+		statusCache: cache,
+	}
 }
 
 func (t *TargetUsecase) Create(ctx context.Context, userID int, url string, intervalSec int) (*domain.Target, error) {
@@ -33,9 +37,9 @@ func (t *TargetUsecase) Create(ctx context.Context, userID int, url string, inte
 	}
 	return target, nil
 }
+
 func (t *TargetUsecase) Delete(ctx context.Context, id int, userID int) error {
 	_, err := t.targetRepo.GetById(ctx, id, userID)
-
 	if err != nil {
 		return err
 	}
@@ -48,10 +52,19 @@ func (t *TargetUsecase) Delete(ctx context.Context, id int, userID int) error {
 }
 
 func (t *TargetUsecase) GetList(ctx context.Context, userID int) ([]domain.Target, error) {
-	target, err := t.targetRepo.GetList(ctx, userID)
+	targets, err := t.targetRepo.GetList(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	return target, nil
 
+	for i := range targets {
+		isOnline, err := t.statusCache.GetStatus(ctx, targets[i].ID)
+		if err != nil {
+			targets[i].IsOnline = false
+			continue
+		}
+		targets[i].IsOnline = isOnline
+	}
+
+	return targets, nil
 }

@@ -8,6 +8,7 @@ type Target struct {
 	URL         string
 	IntervalSec int
 	IsActive    bool
+	IsOnline    bool
 }
 
 type TargetRepository interface {

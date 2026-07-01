@@ -34,6 +34,7 @@ type TargetResponse struct {
 	URL         string `json:"url"`
 	IntervalSec int    `json:"interval_sec"`
 	IsActive    bool   `json:"is_active"`
+	IsOnline    bool   `json:"is_online"`
 }
 
 func (h *TargetHandler) CreateTargetHandler(w http.ResponseWriter, r *http.Request) {
@@ -136,6 +137,7 @@ func (h *TargetHandler) GetListTargetHandler(w http.ResponseWriter, r *http.Requ
 			URL:         domainTarget[i].URL,
 			IntervalSec: domainTarget[i].IntervalSec,
 			IsActive:    domainTarget[i].IsActive,
+			IsOnline:    domainTarget[i].IsOnline,
 		})
 	}
 	w.Header().Set("Content-Type", "application/json")

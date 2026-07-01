@@ -13,11 +13,17 @@ import (
 )
 
 type Consumer struct {
-	ch *amqp091.Channel
+	ch          *amqp091.Channel
+	logRepo     domain.LogRepository
+	statusCache domain.StatusCache
 }
 
-func NewConsumer(ch *amqp091.Channel) *Consumer {
-	return &Consumer{ch: ch}
+func NewConsumer(ch *amqp091.Channel, logRepo domain.LogRepository, statusCache domain.StatusCache) *Consumer {
+	return &Consumer{
+		ch:          ch,
+		logRepo:     logRepo,
+		statusCache: statusCache,
+	}
 }
 
 func (c *Consumer) Start(ctx context.Context) error {
@@ -41,7 +47,6 @@ func (c *Consumer) Start(ctx context.Context) error {
 			if !ok {
 				return errors.New("rabbitmq channel closed")
 			}
-			// Убрали лишний slog.Info отсюда
 			c.processTask(ctx, msg)
 		}
 	}
@@ -60,17 +65,40 @@ func (c *Consumer) processTask(ctx context.Context, msg amqp091.Delivery) {
 	startTime := time.Now()
 	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, task.URL, nil)
 	if err != nil {
-		return // Если не смогли создать запрос, просто выходим
+		slog.Error("Failed to create request", "error", err)
+		return
 	}
 
 	resp, err := http.DefaultClient.Do(req)
 	duration := time.Since(startTime)
 
+	var statusCode int
+	var isUp bool
+
 	if err != nil {
 		slog.Warn("Target is OFFLINE", "url", task.URL, "duration_ms", duration.Milliseconds(), "error", err)
-		return
+		statusCode = 0
+		isUp = false
+	} else {
+		defer resp.Body.Close()
+		slog.Info("Target response", "url", task.URL, "status", resp.StatusCode, "duration_ms", duration.Milliseconds())
+		statusCode = resp.StatusCode
+		isUp = (resp.StatusCode == http.StatusOK)
 	}
-	defer resp.Body.Close()
 
-	slog.Info("Target response", "url", task.URL, "status", resp.StatusCode, "duration_ms", duration.Milliseconds())
+	checkLog := &domain.CheckLog{
+		TargetID:     task.ID,
+		Status:       statusCode,
+		ResponseTime: duration,
+		Flag:         isUp,
+		CreatedAt:    time.Now(),
+	}
+
+	if err := c.logRepo.SaveLog(ctx, checkLog); err != nil {
+		slog.Error("Failed to save check log to Postgres", "error", err)
+	}
+
+	if err := c.statusCache.SetStatus(ctx, task.ID, isUp); err != nil {
+		slog.Error("Failed to save status to Redis", "error", err)
+	}
 }

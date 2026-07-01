@@ -47,7 +47,6 @@ func (s *Scheduler) Start(ctx context.Context) error {
 						slog.Error("Error", err)
 					}
 
-					// TODO: Здесь будет отправка JSON-сообщения в RabbitMQ
 				}
 			}
 		}

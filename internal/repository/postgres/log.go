@@ -16,10 +16,18 @@ func NewLogRepository(pool *pgxpool.Pool) *LogRepository {
 }
 
 func (r *LogRepository) SaveLog(ctx context.Context, check *domain.CheckLog) error {
-	query := `INSERT INTO logs (target_id, status, response_time, flag, created_at) VALUES ($1, $2, $3, $4, $5) RETURNING id`
-	err := r.pool.QueryRow(ctx, query, check.TargetID, check.Status, check.ResponseTime.Milliseconds(), check.Flag, check.CreatedAt).Scan(&check.ID)
-	if err != nil {
+	query := `INSERT INTO check_logs (target_id, status_code, response_time_ms, is_up, checked_at) 
+              VALUES ($1, $2, $3, $4, $5) RETURNING id`
 
+	err := r.pool.QueryRow(ctx, query,
+		check.TargetID,
+		check.Status,
+		check.ResponseTime.Milliseconds(),
+		check.Flag,
+		check.CreatedAt,
+	).Scan(&check.ID)
+
+	if err != nil {
 		return err
 	}
 	return nil
