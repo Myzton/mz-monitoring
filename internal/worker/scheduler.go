@@ -44,7 +44,7 @@ func (s *Scheduler) Start(ctx context.Context) error {
 					slog.Info("Time to check target!", "ID", target.ID, "Interval", target.IntervalSec, "URL", target.URL)
 					err := s.QueuePub.Publish(ctx, &check)
 					if err != nil {
-						slog.Error("Error", err)
+						slog.Error("failed to publish check task", "error", err)
 					}
 
 				}

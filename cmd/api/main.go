@@ -5,7 +5,6 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
-	"os"
 	"time"
 
 	delivery "mz-monitoring/internal/delivery/http"
@@ -13,6 +12,7 @@ import (
 	"mz-monitoring/internal/repository/postgres"
 	redisRepo "mz-monitoring/internal/repository/redis"
 	"mz-monitoring/internal/usecase"
+	"mz-monitoring/pkg/env"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	goredis "github.com/redis/go-redis/v9"
@@ -21,13 +21,15 @@ import (
 func main() {
 	ctx := context.Background()
 
-	jwtSecret := os.Getenv("JWT_SECRET")
+	env.Load(".env")
+
+	jwtSecret := env.Get("JWT_SECRET", "")
 	if jwtSecret == "" {
 		jwtSecret = "super-secret-key-for-local-dev-12345"
 		slog.Warn("JWT_SECRET env not found, using default secret key")
 	}
 
-	pgDSN := "postgres://postgres:mysecretpassword@localhost:5432/mz_monitoring"
+	pgDSN := env.Get("DATABASE_URL", "postgres://postgres:mysecretpassword@localhost:5432/mz_monitoring")
 	pool, err := pgxpool.New(ctx, pgDSN)
 	if err != nil {
 		log.Fatalf("Unable to connect to PostgreSQL: %v", err)
@@ -35,8 +37,9 @@ func main() {
 	defer pool.Close()
 	slog.Info("Successfully connected to PostgreSQL")
 
+	redisAddr := env.Get("REDIS_ADDR", "localhost:6379")
 	redisClient := goredis.NewClient(&goredis.Options{
-		Addr: "localhost:6379",
+		Addr: redisAddr,
 	})
 	if err := redisClient.Ping(ctx).Err(); err != nil {
 		log.Fatalf("Unable to connect to Redis: %v", err)

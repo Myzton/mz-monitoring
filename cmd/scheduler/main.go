@@ -11,6 +11,7 @@ import (
 	"mz-monitoring/internal/repository/postgres"
 	"mz-monitoring/internal/repository/rabbitmq"
 	"mz-monitoring/internal/worker"
+	"mz-monitoring/pkg/env"
 	pkgRabbit "mz-monitoring/pkg/rabbitmq"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -20,7 +21,9 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	pgDSN := "postgres://postgres:mysecretpassword@localhost:5432/mz_monitoring"
+	env.Load(".env")
+
+	pgDSN := env.Get("DATABASE_URL", "postgres://postgres:mysecretpassword@localhost:5432/mz_monitoring")
 	pool, err := pgxpool.New(ctx, pgDSN)
 	if err != nil {
 		log.Fatalf("Scheduler: unable to connect to PostgreSQL: %v", err)
@@ -28,7 +31,7 @@ func main() {
 	defer pool.Close()
 	slog.Info("Scheduler successfully connected to PostgreSQL")
 
-	rabbitURL := "amqp://guest:guest@localhost:5672/"
+	rabbitURL := env.Get("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
 	conn, ch, err := pkgRabbit.InitRabbitMQ(rabbitURL)
 	if err != nil {
 		log.Fatalf("Scheduler: unable to connect to RabbitMQ: %v", err)
