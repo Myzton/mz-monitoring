@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-
   postgres:
     image: postgres:15-alpine
     container_name: mz_postgres
@@ -13,10 +12,13 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: unless-stopped
-
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
@@ -27,7 +29,6 @@ services:
       - redis_data:/data
     restart: unless-stopped
 
-
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: mz_rabbitmq
@@ -36,6 +37,54 @@ services:
       - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    restart: unless-stopped
+
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mz_api
+    command: /app/bin/api
+    ports:
+      - "8080:8080"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mz_scheduler
+    command: /app/bin/scheduler
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    restart: unless-stopped
+
+  # 6. Воркер (Worker Consumer)
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mz_worker
+    command: /app/bin/worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
     restart: unless-stopped
 
 volumes:
